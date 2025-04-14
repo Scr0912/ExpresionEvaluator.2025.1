@@ -1,8 +1,10 @@
-﻿namespace Evaluator.Logic;
+﻿using System.Text;
+
+namespace Evaluator.Logic;
 
 public class FunctionEvaluator
 {
-    public static double Evalute(string infix)
+    public static double Evaluate(string infix)
     {
         var postfix = ToPostfix(infix);
         return Calculate(postfix);
@@ -11,110 +13,127 @@ public class FunctionEvaluator
     private static double Calculate(string postfix)
     {
         var stack = new Stack<double>();
+        string numberBuffer = "";
+
         foreach (var item in postfix)
         {
-            if (IsOperator(item))
+            if (char.IsDigit(item) || item == '.')
             {
-                var operator2 = stack.Pop();
-                var operator1 = stack.Pop();
-                stack.Push(Result(operator1, item, operator2));
+                numberBuffer += item;
             }
             else
             {
-                stack.Push(char.GetNumericValue(item));
+                if (numberBuffer != "")
+                {
+                    stack.Push(double.Parse(numberBuffer));
+                    numberBuffer = "";
+                }
+
+                if (IsOperator(item))
+                {
+                    var operand2 = stack.Pop();
+                    var operand1 = stack.Pop();
+                    stack.Push(Compute(operand1, item, operand2));
+                }
             }
         }
+
+        
+        if (numberBuffer != "")
+        {
+            stack.Push(double.Parse(numberBuffer));
+        }
+
         return stack.Pop();
     }
 
-    private static double Result(double operator1, char item, double operator2)
+    private static double Compute(double operand1, char op, double operand2)
     {
-        return item switch
+        return op switch
         {
-            '+' => operator1 + operator2,
-            '-' => operator1 - operator2,
-            '*' => operator1 * operator2,
-            '/' => operator1 / operator2,
-            '^' => Math.Pow(operator1, operator2),
-            _ => throw new Exception("Invalid expresion"),
+            '+' => operand1 + operand2,
+            '-' => operand1 - operand2,
+            '*' => operand1 * operand2,
+            '/' => operand1 / operand2,
+            '^' => Math.Pow(operand1, operand2),
+            _ => throw new Exception("Invalid operator"),
         };
     }
 
     private static string ToPostfix(string infix)
     {
         var stack = new Stack<char>();
-        var postfix = string.Empty;
+        var postfix = new StringBuilder();
+        string numberBuffer = "";
+
         foreach (var item in infix)
         {
-            if (IsOperator(item))
+            if (char.IsDigit(item) || item == '.')
             {
-                if (stack.Count == 0)
-                {
-                    stack.Push(item);
-                }
-                else
-                {
-                    if (item == ')')
-                    {
-                        do
-                        {
-                            postfix += stack.Pop();
-                        } while (stack.Peek() != '(');
-                        stack.Pop();
-                    }
-                    else
-                    {
-                        if (PriorityExpression(item) > PriorityStack(stack.Peek()))
-                        {
-                            stack.Push(item);
-                        }
-                        else
-                        {
-                            postfix += stack.Pop();
-                            stack.Push(item);
-                        }
-                    }
-                }
+                numberBuffer += item;
             }
             else
             {
-                postfix += item;
+                if (numberBuffer != "")
+                {
+                    postfix.Append(numberBuffer + " ");
+                    numberBuffer = "";
+                }
+
+                if (IsOperator(item))
+                {
+                    if (item == '(')
+                    {
+                        stack.Push(item);
+                    }
+                    else if (item == ')')
+                    {
+                        while (stack.Count > 0 && stack.Peek() != '(')
+                        {
+                            postfix.Append(stack.Pop() + " ");
+                        }
+                        stack.Pop(); 
+                    }
+                    else
+                    {
+                        while (stack.Count > 0 && Priority(stack.Peek()) >= Priority(item))
+                        {
+                            postfix.Append(stack.Pop() + " ");
+                        }
+                        stack.Push(item);
+                    }
+                }
             }
         }
-        do
+
+        
+        if (numberBuffer != "")
         {
-            postfix += stack.Pop();
-        } while (stack.Count > 0);
-        return postfix;
+            postfix.Append(numberBuffer + " ");
+        }
+
+        
+        while (stack.Count > 0)
+        {
+            postfix.Append(stack.Pop() + " ");
+        }
+
+        return postfix.ToString().Trim();
     }
 
-    private static int PriorityStack(char item)
+    private static int Priority(char op)
     {
-        return item switch
-        {
-            '^' => 3,
-            '*' => 2,
-            '/' => 2,
-            '+' => 1,
-            '-' => 1,
-            '(' => 0,
-            _ => throw new Exception("Invalid expression."),
-        };
-    }
-
-    private static int PriorityExpression(char item)
-    {
-        return item switch
+        return op switch
         {
             '^' => 4,
-            '*' => 2,
-            '/' => 2,
-            '+' => 1,
-            '-' => 1,
-            '(' => 5,
-            _ => throw new Exception("Invalid expression."),
+            '*' => 3,
+            '/' => 3,
+            '+' => 2,
+            '-' => 2,
+            '(' => 1,
+            _ => throw new Exception("Invalid operator"),
         };
     }
 
-    private static bool IsOperator(char item) => "()^*/+-".IndexOf(item) >= 0;
+    private static bool IsOperator(char item) => "+-*/^()".Contains(item);
 }

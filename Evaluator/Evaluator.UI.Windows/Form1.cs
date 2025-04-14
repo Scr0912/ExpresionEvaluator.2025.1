@@ -116,7 +116,7 @@ namespace Evaluator.UI.Windows
 
         private void btnEquals_Click(object sender, EventArgs e)
         {
-            txtDisplay.Text += $" = {FunctionEvaluator.Evalute(txtDisplay.Text)}";
+            txtDisplay.Text += $" = {FunctionEvaluator.Evaluate(txtDisplay.Text)}";
         }
     }
 }
